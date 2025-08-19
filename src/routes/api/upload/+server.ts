@@ -1,9 +1,10 @@
 import { json } from '@sveltejs/kit';
 import { createClient } from '@supabase/supabase-js';
-import { env } from '$env/dynamic/private';
+import { PUBLIC_SUPABASE_URL} from '$env/static/public';
 import type { RequestHandler } from './$types';
+import { SUPABASE_SERVICE_KEY } from '$env/static/private';
 
-const supabase = createClient(env.PRIVATE_SUPABASE_URL, env.PRIVATE_SUPABASE_SERVICE_KEY);
+const supabase = createClient(PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 export const POST: RequestHandler = async ({ request }) => {
   const audioBlob = await request.blob();
