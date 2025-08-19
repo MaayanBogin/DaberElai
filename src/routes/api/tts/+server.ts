@@ -2,7 +2,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { PRIVATE_BEAM_API_KEY } from '$env/static/private';
+import { BEAM_API_KEY } from '$env/static/private';
 
 interface TTSRequest {
   prompt: string[];
@@ -66,7 +66,7 @@ export const POST: RequestHandler = async ({ request }) => {
     const response = await fetch(ttsApiUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${PRIVATE_BEAM_API_KEY}`,
+        'Authorization': `Bearer ${BEAM_API_KEY}`,
         'Content-Type': 'application/json',
         'Connection': 'keep-alive',
       },
