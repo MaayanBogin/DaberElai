@@ -37,22 +37,18 @@ export const POST: RequestHandler = async ({ request }) => {
       ref_text,
     });
 
-    // Validate input
     if (!prompt || !Array.isArray(prompt) || prompt.length === 0) {
       return json({ error: 'Prompt is required and must be a non-empty array' }, { status: 400 });
     }
 
-    // Check if text is Hebrew (basic validation)
     const hebrewText = prompt[0];
     const hebrewRegex = /[\u0590-\u05FF]/;
     if (!hebrewRegex.test(hebrewText)) {
       return json({ error: 'Text must contain Hebrew characters' }, { status: 400 });
     }
 
-    // Replace with your actual TTS API URL
     const ttsApiUrl = env.PRIVATE_BEAM_API_URL;
     
-    // Prepare the payload exactly as specified
     const payload = {
       prompt,
       nikud,
@@ -83,7 +79,6 @@ export const POST: RequestHandler = async ({ request }) => {
     
     console.log('TTS API Response:', result);
 
-    // Return the response from the TTS service
     return json(result);
 
   } catch (error) {

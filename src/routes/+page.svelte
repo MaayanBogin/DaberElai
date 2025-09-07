@@ -1,5 +1,4 @@
 <!-- src/routes/+page.svelte -->
-<!-- src/routes/+page.svelte -->
 <script lang="ts">
     import { page } from '$app/state';
     import { SignOut, SignIn } from '@auth/sveltekit/components';
@@ -18,6 +17,7 @@
   let cloneInput = '';
   let nikudEnabled = false;
   let selectedVoice = 'default';
+  let temperature = 0.5;
   let isRecording = false;
   let voiceTrained = false;
   let recordedBlob: Blob | null = null;
@@ -292,9 +292,8 @@
         body: JSON.stringify({
           prompt: [textInput],
           nikud: nikudEnabled,
-          vc: false,
           ref_audio: null,
-          ref_text: null
+          temperature: temperature
         }),
       });
       if (!response.ok) {
@@ -348,9 +347,8 @@
       const clonePayload = {
         prompt: [cloneInput],
         nikud: nikudEnabled,
-        vc: true,
         ref_audio: uploadedAudioUrl, // Use the public URL from Supabase
-        ref_text: currentTrainingText
+        temperature: temperature
       };
 
       console.log('Sending Clone Payload:', clonePayload);
@@ -460,6 +458,17 @@
           </button>
           <span class="toggle-label">Nikud</span>
         </div>
+        <div class="slider-wrapper">
+          <label class="slider-label">Temperature: {temperature.toFixed(2)}</label>
+          <input 
+            type="range" 
+            min="0" 
+            max="1" 
+            step="0.01" 
+            bind:value={temperature} 
+            class="temperature-slider"
+          />
+        </div>
         <select bind:value={selectedVoice} class="voice-select">
           {#each voiceOptions as option}
             <option value={option.value} disabled={option.disabled}>
@@ -538,6 +547,30 @@
         ></textarea>
         <div class="char-count {cloneCharClass}">
           {cloneCharCount}/{MAX_CHARS}
+        </div>
+      </div>
+      <div class="controls">
+        <div class="toggle-wrapper">
+          <button 
+            class="toggle"
+            class:active={nikudEnabled}
+            on:click={() => nikudEnabled = !nikudEnabled}
+            aria-label="Toggle Nikud"
+          >
+            <div class="toggle-knob"></div>
+          </button>
+          <span class="toggle-label">Nikud</span>
+        </div>
+        <div class="slider-wrapper">
+          <label class="slider-label">Temperature: {temperature.toFixed(2)}</label>
+          <input 
+            type="range" 
+            min="0" 
+            max="1" 
+            step="0.01" 
+            bind:value={temperature} 
+            class="temperature-slider"
+          />
         </div>
       </div>
       <button 
@@ -671,6 +704,7 @@
     gap: 1rem;
     align-items: center;
     margin-bottom: 1.5rem;
+    flex-wrap: wrap;
   }
   .toggle-wrapper {
     display: flex;
@@ -706,6 +740,41 @@
   .toggle-label {
     font-size: 14px;
     color: #6b7280;
+  }
+  .slider-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 120px;
+  }
+  .slider-label {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 500;
+  }
+  .temperature-slider {
+    width: 100%;
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    outline: none;
+    appearance: none;
+  }
+  .temperature-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #3b82f6;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  .temperature-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #3b82f6;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
   }
   .voice-select {
     padding: 8px 12px;
@@ -811,6 +880,32 @@
   }
   .status.recording {
     color: #dc2626;
+  }
+  .audio-player {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+  }
+  .audio-player h3 {
+    margin: 0 0 1rem 0;
+    font-size: 16px;
+    color: #1a1a1a;
+  }
+  .download-link {
+    display: inline-block;
+    margin-top: 0.5rem;
+    padding: 8px 12px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    text-decoration: none;
+    color: #6b7280;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .download-link:hover {
+    background: #e5e7eb;
   }
   @media (max-width: 640px) {
     .title {
