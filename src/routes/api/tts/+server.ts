@@ -37,10 +37,6 @@ export const POST: RequestHandler = async ({ request }) => {
       ref_text,
     });
 
-    if (!prompt || !Array.isArray(prompt) || prompt.length === 0) {
-      return json({ error: 'Prompt is required and must be a non-empty array' }, { status: 400 });
-    }
-
     const hebrewText = prompt[0];
     const hebrewRegex = /[\u0590-\u05FF]/;
     if (!hebrewRegex.test(hebrewText)) {
