@@ -290,7 +290,7 @@
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          prompt: [textInput],
+          prompt: textInput,
           nikud: nikudEnabled,
           ref_audio: null,
           temperature: temperature
@@ -345,7 +345,7 @@
 
     try {
       const clonePayload = {
-        prompt: [cloneInput],
+        prompt: cloneInput,
         nikud: nikudEnabled,
         ref_audio: uploadedAudioUrl, // Use the public URL from Supabase
         temperature: temperature
