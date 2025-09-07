@@ -3,15 +3,15 @@ import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 
 interface TTSRequest {
-  prompt: string[];
+  prompt: string;
   nikud: boolean;
-  vc: boolean;
   ref_audio: string | null;
-  ref_text: string | null;
+  temperature: number;
 }
 
 interface TTSResponse {
   audio_url?: string;
+  task_id?: string;
   status?: string;
   message?: string;
   error?: string;
@@ -24,33 +24,38 @@ export const POST: RequestHandler = async ({ request }) => {
     const {
       prompt,
       nikud,
-      vc,
       ref_audio,
-      ref_text,
+      temperature
     } = requestData;
 
     console.log('Received /api/tts payload:', {
       prompt,
       nikud,
-      vc,
       ref_audio,
-      ref_text,
+      temperature,
     });
 
-    const hebrewText = prompt[0];
+    if (!prompt || typeof prompt !== 'string') {
+      return json({ error: 'Prompt is required and must be a string' }, { status: 400 });
+    }
+
     const hebrewRegex = /[\u0590-\u05FF]/;
-    if (!hebrewRegex.test(hebrewText)) {
+    if (!hebrewRegex.test(prompt)) {
       return json({ error: 'Text must contain Hebrew characters' }, { status: 400 });
     }
+
+    // Validate temperature
+    const validTemperature = (typeof temperature === 'number' && temperature >= 0 && temperature <= 1) 
+      ? temperature 
+      : 0.7;
 
     const ttsApiUrl = env.PRIVATE_BEAM_API_URL;
     
     const payload = {
       prompt,
       nikud,
-      vc,
       ref_audio,
-      ref_text
+      temperature: validTemperature
     };
 
     const response = await fetch(ttsApiUrl, {
@@ -90,3 +95,4 @@ export const POST: RequestHandler = async ({ request }) => {
     );
   }
 };
+
