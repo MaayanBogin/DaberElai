@@ -49,6 +49,8 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
+  tokens         Int?     @default(3)
+  plan          String?   @default("Free")
 
   @@map("users")
 }

@@ -36,6 +36,9 @@
   let pollingInterval: number | null = null;
   let generatedAudioUrl: string | null = null;
 
+  let userTokens: number = 0;
+  let userPlan: string = 'Free';
+
   // Constants
   const MAX_CHARS = 100;
   
@@ -79,6 +82,24 @@
 
   function switchTab(tab: 'tts' | 'clone'): void {
     activeTab = tab;
+  }
+
+// Add this function to fetch user tokens
+  async function fetchUserTokens() {
+    if (!page.data.session?.user) return;
+    
+    try {
+      const response = await fetch('/api/user/tokens');
+      if (response.ok) {
+        const data = await response.json();
+        userTokens = data.tokens;
+        userPlan = data.plan;
+      } else {
+        console.error('Failed to fetch user tokens');
+      }
+    } catch (error) {
+      console.error('Error fetching tokens:', error);
+    }
   }
 
   // Task status checking (no changes needed here)
@@ -271,122 +292,156 @@
   }
 
   // generateTTS function remains unchanged
-  async function generateTTS(): Promise<void> {
-    if (!requireAuth()) return;
-    if (!textInput.trim()) {
-      alert('Enter Hebrew text');
-      return;
-    }
-    if (isLoading) {
-      alert('Please wait for the current generation to complete');
-      return;
-    }
-    isLoading = true;
-    generatedAudioUrl = null;
-    try {
-      const response = await fetch('/api/tts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt: textInput,
-          nikud: nikudEnabled,
-          ref_audio: null,
-          temperature: temperature
-        }),
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const result = await response.json();
-      console.log('TTS Response:', result);
-      
-      if (result.task_id) {
-        taskId = result.task_id;
-        console.log('Task ID:', taskId);
-        pollTaskStatus(taskId!);
-      } else if (result.audio_url) {
-        generatedAudioUrl = result.audio_url;
-        const audio = new Audio(result.audio_url);
-        audio.play().catch(console.error);
-        alert('Audio generated successfully! 🎵');
-        isLoading = false;
-      } else {
-        throw new Error('No task_id or audio_url in response');
-      }
-    } catch (error: any) {
-      console.error('TTS Generation Error:', error);
-      alert(`Failed to generate audio: ${error.message}`);
-      isLoading = false;
-    }
+async function generateTTS(): Promise<void> {
+  if (!requireAuth()) return;
+  if (!textInput.trim()) {
+    alert('Enter Hebrew text');
+    return;
   }
+  if (isLoading) {
+    alert('Please wait for the current generation to complete');
+    return;
+  }
+  
+  // Check tokens before proceeding
+  if (userTokens < 1) {
+    alert('You have no tokens remaining. Please upgrade your plan to continue.');
+    return;
+  }
+  
+  isLoading = true;
+  generatedAudioUrl = null;
+  
+  try {
+    const response = await fetch('/api/tts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt: textInput,
+        nikud: nikudEnabled,
+        ref_audio: null,
+        temperature: temperature
+      }),
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || `HTTP error! status: ${response.status}`);
+    }
+    
+    console.log('TTS Response:', result);
+    
+    // Update token count from response
+    if (result.remainingTokens !== undefined) {
+      userTokens = result.remainingTokens;
+    }
+    
+    if (result.task_id) {
+      taskId = result.task_id;
+      console.log('Task ID:', taskId);
+      pollTaskStatus(taskId!);
+    } else if (result.audio_url) {
+      generatedAudioUrl = result.audio_url;
+      const audio = new Audio(result.audio_url);
+      audio.play().catch(console.error);
+      alert('Audio generated successfully!');
+      isLoading = false;
+    } else {
+      throw new Error('No task_id or audio_url in response');
+    }
+  } catch (error: any) {
+    console.error('TTS Generation Error:', error);
+    alert(`Failed to generate audio: ${error.message}`);
+    isLoading = false;
+    // Refresh tokens in case they were affected
+    fetchUserTokens();
+  }
+}
+
 
   // *** MODIFIED FUNCTION ***
-  async function generateClone(): Promise<void> {
-    if (!requireAuth()) return;
-    if (!cloneInput.trim()) {
-      alert('Enter text to clone');
-      return;
-    }
-    // Check for the uploaded URL now
-    if (!voiceTrained || !uploadedAudioUrl) {
-      alert('Please record and save your voice first. The voice must be successfully uploaded.');
-      return;
-    }
-
-    if (isLoading) {
-      alert('Please wait for the current task to complete.');
-      return;
-    }
-
-    isLoading = true;
-    generatedAudioUrl = null; // Clear previous results
-
-    try {
-      const clonePayload = {
-        prompt: cloneInput,
-        nikud: nikudEnabled,
-        ref_audio: uploadedAudioUrl, // Use the public URL from Supabase
-        temperature: temperature
-      };
-
-      console.log('Sending Clone Payload:', clonePayload);
-
-      const response = await fetch('/api/tts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(clonePayload),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('Clone Response:', result);
-
-      if (result.task_id) {
-        taskId = result.task_id;
-        console.log('Clone Task ID:', taskId);
-        // Start polling for the clone task status
-        pollTaskStatus(taskId!);
-      } else {
-        throw new Error('Cloning service did not return a task_id.');
-      }
-    } catch (error: any) {
-      console.error('Clone Generation Error:', error);
-      alert(`Failed to generate cloned voice: ${error.message}`);
-      isLoading = false; // Reset loading state on error
-    }
-    // No finally block needed to manage button state as it's handled by `isLoading`
+async function generateClone(): Promise<void> {
+  if (!requireAuth()) return;
+  if (!cloneInput.trim()) {
+    alert('Enter text to clone');
+    return;
+  }
+  if (!voiceTrained || !uploadedAudioUrl) {
+    alert('Please record and save your voice first. The voice must be successfully uploaded.');
+    return;
+  }
+  if (isLoading) {
+    alert('Please wait for the current task to complete.');
+    return;
+  }
+  
+  // Check tokens before proceeding
+  if (userTokens < 1) {
+    alert('You have no tokens remaining. Please upgrade your plan to continue.');
+    return;
   }
 
+  isLoading = true;
+  generatedAudioUrl = null;
+
+  try {
+    const clonePayload = {
+      prompt: cloneInput,
+      nikud: nikudEnabled,
+      ref_audio: uploadedAudioUrl,
+      temperature: temperature
+    };
+
+    console.log('Sending Clone Payload:', clonePayload);
+
+    const response = await fetch('/api/tts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(clonePayload),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || `HTTP error! status: ${response.status}`);
+    }
+
+    console.log('Clone Response:', result);
+    
+    // Update token count from response
+    if (result.remainingTokens !== undefined) {
+      userTokens = result.remainingTokens;
+    }
+
+    if (result.task_id) {
+      taskId = result.task_id;
+      console.log('Clone Task ID:', taskId);
+      pollTaskStatus(taskId!);
+    } else {
+      throw new Error('Cloning service did not return a task_id.');
+    }
+  } catch (error: any) {
+    console.error('Clone Generation Error:', error);
+    alert(`Failed to generate cloned voice: ${error.message}`);
+    isLoading = false;
+    // Refresh tokens in case they were affected
+    fetchUserTokens();
+  }
+}
+
   onMount(() => {
+    fetchUserTokens();
     randomizeTrainingText();
   });
+
+  $: if (page.data.session?.user) {
+  fetchUserTokens();
+}
 </script>
 <!-- Rest of the HTML and CSS remains unchanged -->
 
@@ -394,6 +449,14 @@
   {#if page.data.session?.user}
     <div class="user-info">
       <span>Welcome, {page.data.session.user.name || page.data.session.user.email}</span>
+      <div class="token-info">
+        <span class="token-count" class:low-tokens={userTokens < 2}>
+          {userTokens} tokens remaining
+        </span>
+        <span class="plan-badge" class:free={userPlan === 'Free'}>
+          {userPlan}
+        </span>
+      </div>
       <SignOut>
         <button slot="submitButton" class="auth-btn signout">Sign Out</button>
       </SignOut>

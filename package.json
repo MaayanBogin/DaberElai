@@ -31,6 +31,7 @@
 	"dependencies": {
 		"@auth/prisma-adapter": "^2.10.0",
 		"@auth/sveltekit": "^1.10.0",
+		"@polar-sh/sdk": "^0.34.16",
 		"@prisma/client": "^6.14.0",
 		"@supabase/supabase-js": "^2.55.0"
 	}
