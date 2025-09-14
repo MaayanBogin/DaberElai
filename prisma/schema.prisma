@@ -49,10 +49,25 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
-  tokens         Int?     @default(3)
+  tokens        Int?      @default(3)
   plan          String?   @default("Free")
 
+  voices        CustomVoice[]
+
   @@map("users")
+}
+
+model CustomVoice {
+  id        String   @id @default(cuid())
+  name      String   // The name the user gives the voice, e.g., "My Podcast Voice"
+  url       String   // The public URL from Supabase Storage
+  createdAt DateTime @default(now())
+
+  // Relation to the User model
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name]) // A user cannot have two voices with the same name
 }
 
 
