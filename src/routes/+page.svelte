@@ -378,7 +378,7 @@
 				<div class="pricing-header">
 					<h3 class="plan-name">בסיסי</h3>
 					<div class="pricing-highlight">$2</div>
-					<p class="plan-description">מושלם לשימוש אישי</p>
+					<p class="plan-description">לשימוש אישי</p>
 				</div>
 				<div class="pricing-details">
 					<div class="pricing-feature">✓ 100 שימושים (≈5,000-8,000 תווים)</div>
